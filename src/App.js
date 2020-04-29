@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from "react";
-
-import api from './services/api';
+import React, { useEffect, useState } from "react";
 
 import {
   SafeAreaView,
@@ -12,70 +10,78 @@ import {
   TouchableOpacity,
 } from "react-native";
 
+import api from './services/api';
+
 export default function App() {
-  const [ repositories, setRepositories ] = useState([]);
+
+  const [repositories, setRepositories] = useState([]);
 
   useEffect(() => {
-    api.get('repositories').then(response => {
-      const _repositories = response.data;
+    async function loadRepositories() {
+      const response = await api.get('repositories');
+      setRepositories(response.data);
+    }
 
-      setRepositories(_repositories);
-    });
-  }, [repositories]);
+    loadRepositories();
+  }, []);
 
   async function handleLikeRepository(id) {
-    await api.post(`repositories/${id}/like`);
+    const response = await api.post(`repositories/${id}/like`);
+    setRepositories(repositories.map(repository => {
+      if (repository.id === id) {
+        return response.data;
+      }
 
-    const repositoryIndex = repositories.findIndex(repository => repository.id === id);
-    const _repositories = repositories;
-    _repositories[repositoryIndex].likes += 1;
-
-    setRepositories(_repositories);
+      return repository;
+    }))
   }
 
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#7159c1" />
       <SafeAreaView style={styles.container}>
-        <FlatList
+        <FlatList 
           data={repositories}
           keyExtractor={repository => repository.id}
-          renderItem={({ item: repository }) => (
-            <View style={styles.repositoryContainer}>
-              <Text style={styles.repository}>{repository.title}</Text>
-
-              <View style={styles.techsContainer}>
-                {repository.techs.map(tech => (
-                  <Text key={tech} style={styles.tech}>
-                    {tech}
-                  </Text>
-                ))}
-              </View>
-
-              <View style={styles.likesContainer}>
-                <Text
-                  style={styles.likeText}
-                  // Remember to replace "1" below with repository ID: {`repository-likes-${repository.id}`}
-                  testID={`repository-likes-${repository.id}`}
-                >
-                  {repository.likes} {repository.likes === 1 ? 'curtida' : 'curtidas'}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() => handleLikeRepository(repository.id)}
-                activeOpacity={0.6}
-                // Remember to replace "1" below with repository ID: {`like-button-${repository.id}`}
-                testID={`like-button-${repository.id}`}
-              >
-                <Text style={styles.buttonText}>Curtir</Text>
-              </TouchableOpacity>
-            </View>
+          renderItem={({ item }) => (
+            <RepositoryItem repository={item} handleLikeRepository={handleLikeRepository} />
           )}
         />
       </SafeAreaView>
     </>
+  );
+}
+
+function RepositoryItem({ repository, handleLikeRepository }) {
+  return (
+    <View style={styles.repositoryContainer}>
+      <Text style={styles.repository}>{repository.title}</Text>
+
+      <View style={styles.techsContainer}>
+        {repository.techs.map(tech => (
+          <Text key={tech} style={styles.tech}>
+            {tech}
+          </Text>
+        ))}
+      </View>
+
+      <View style={styles.likesContainer}>
+        <Text
+          style={styles.likeText}
+          testID={`repository-likes-${repository.id}`}
+        >
+          {repository.likes} curtidas
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => handleLikeRepository(repository.id)}
+        testID={`like-button-${repository.id}`}
+      >
+        <Text style={styles.buttonText}>Curtir</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
